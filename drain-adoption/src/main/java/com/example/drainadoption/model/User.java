@@ -1,0 +1,36 @@
+package com.example.drainadoption.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "users")
+@Data
+@NoArgsConstructor
+public class User {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String name;
+    
+    @Column(unique = true, nullable = false)
+    private String email;
+    
+    @Column(nullable = false)
+    private String password;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+    
+    @OneToOne(mappedBy = "adoptedByUser")
+    private Drain adoptedDrain;
+    
+    public enum UserRole {
+        ADMIN,
+        ADOPTER
+    }
+}

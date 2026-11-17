@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: aad2
+      POSTGRES_USER: aad2
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["aad2_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aad2 -d aad2"]
+      interval: 5s
+      retries: 10
+  app:
+    build: .
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      DATABASE_URL: jdbc:postgresql://postgres:5432/aad2
+      DATABASE_USERNAME: aad2
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      UPLOAD_DIRECTORY: /app/data/photos
+    volumes: ["aad2_photos:/app/data/photos"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  aad2_data:
+  aad2_photos:
