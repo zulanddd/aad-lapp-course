@@ -29,7 +29,7 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: REPORT_PHOTOS_ENABLED
-        value: "false"
+        value: "true"
       - key: SEED_DEMO
         value: "false"
   - type: web
