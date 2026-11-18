@@ -1,9 +1,13 @@
 package com.example.drainadoption.controller;
 
 import com.example.drainadoption.model.PublicLocation;
+import com.example.drainadoption.model.PublicLocationAdoption;
 import com.example.drainadoption.model.PublicLocationPhoto;
+import com.example.drainadoption.model.User;
+import com.example.drainadoption.repository.PublicLocationAdoptionRepository;
 import com.example.drainadoption.repository.PublicLocationPhotoRepository;
 import com.example.drainadoption.repository.PublicLocationRepository;
+import com.example.drainadoption.repository.UserRepository;
 import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +19,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.Principal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -25,8 +30,15 @@ import java.util.Locale;
 public class PublicLocationController {
     private final PublicLocationRepository locations;
     private final PublicLocationPhotoRepository photos;
-    public PublicLocationController(PublicLocationRepository locations, PublicLocationPhotoRepository photos) {
-        this.locations=locations; this.photos=photos;
+    private final PublicLocationAdoptionRepository adoptions;
+    private final UserRepository users;
+
+    public PublicLocationController(PublicLocationRepository locations, PublicLocationPhotoRepository photos,
+                                    PublicLocationAdoptionRepository adoptions, UserRepository users) {
+        this.locations = locations;
+        this.photos = photos;
+        this.adoptions = adoptions;
+        this.users = users;
     }
     public record Edit(String name,String nameFi,String description,String descriptionFi,PublicLocation.Kind kind,
                        LocalDate observedOn,Double latitude,Double longitude,boolean published,boolean confirmed) {}
@@ -47,6 +59,30 @@ public class PublicLocationController {
         published(id);
         return photo(id);
     }
+
+    @GetMapping("/api/me/location-adoptions")
+    public ResponseEntity<List<Long>> myAdoptions(Principal principal) {
+        return uncached(adoptions.findPublishedIdsFor(principal.getName()));
+    }
+
+    @PutMapping("/api/locations/{id}/adoption")
+    public ResponseEntity<Void> adopt(@PathVariable long id, Principal principal) {
+        User adopter = adopter(principal);
+        PublicLocation location = lockLocation(id);
+        if (!location.isPublished()) throw missing();
+        if (!adoptions.existsByAdopterIdAndLocationId(adopter.getId(), id)) {
+            adoptions.save(new PublicLocationAdoption(adopter, location));
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/api/locations/{id}/adoption")
+    public ResponseEntity<Void> cancelAdoption(@PathVariable long id, Principal principal) {
+        User adopter = adopter(principal);
+        lockLocation(id);
+        adoptions.removeForAdopter(adopter.getId(), id);
+        return ResponseEntity.noContent().build();
+    }
     @GetMapping("/api/admin/locations") public ResponseEntity<List<View>> drafts() {
         return uncached(locations.findAllByOrderByObservedOnDescIdDesc().stream().map(View::of).toList());
     }
@@ -60,11 +96,11 @@ public class PublicLocationController {
     }
     @PutMapping(value="/api/admin/locations/{id}",consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
     public View update(@PathVariable long id,@RequestPart("location") Edit x,@RequestPart(value="photo",required=false) MultipartFile file) {
-        return save(existing(id),x,file);
+        return save(lockLocation(id),x,file);
     }
     @PutMapping("/api/admin/locations/{id}/withdraw") public View withdraw(@PathVariable long id) {
-        PublicLocation p=existing(id);
-        p.setPublished(false);
+        PublicLocation p=lockLocation(id);
+        unpublish(p);
         return View.of(p);
     }
     private View save(PublicLocation p,Edit x,MultipartFile file) {
@@ -78,7 +114,8 @@ public class PublicLocationController {
         p.setLatitude(x.latitude()); p.setLongitude(x.longitude());
         byte[] encoded=file==null?null:encode(file);
         if(x.published()&&(!x.confirmed()||(!p.isHasPhoto()&&encoded==null))) throw bad("PHOTO_AND_CONFIRMATION_REQUIRED");
-        p.setPublished(x.published());
+        if (x.published()) p.setPublished(true);
+        else if (p.isPublished()) unpublish(p);
         if(encoded!=null) p.setHasPhoto(true);
         p=locations.save(p);
         if(encoded!=null) photos.save(new PublicLocationPhoto(p.getId(),encoded));
@@ -116,6 +153,16 @@ public class PublicLocationController {
     }
     private PublicLocation published(long id) { return locations.findByIdAndPublishedTrue(id).orElseThrow(PublicLocationController::missing); }
     private PublicLocation existing(long id) { return locations.findById(id).orElseThrow(PublicLocationController::missing); }
+    // Serialize changes to both publication and adoption for the same location.
+    private PublicLocation lockLocation(long id) { return locations.findForUpdate(id).orElseThrow(PublicLocationController::missing); }
+    private void unpublish(PublicLocation location) {
+        location.setPublished(false);
+        adoptions.removeForLocation(location.getId());
+    }
+    private User adopter(Principal principal) {
+        return users.findByEmail(principal.getName())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+    }
     private static <T> ResponseEntity<T> uncached(T value) { return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(value); }
     private static ResponseStatusException missing() { return new ResponseStatusException(HttpStatus.NOT_FOUND); }
     private static ResponseStatusException bad(String code) { return new ResponseStatusException(HttpStatus.BAD_REQUEST,code); }
