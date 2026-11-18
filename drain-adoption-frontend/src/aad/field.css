@@ -53,8 +53,7 @@ body{background:var(--paper)!important}
 .location-card h3{margin:7px 0;line-height:1.24}.location-card p{margin-bottom:0}
 .location-type{font-size:13px;color:var(--green);font-weight:700}
 .location-select{min-height:44px;text-align:left;display:inline-block;background:transparent;border:0;color:var(--ink);padding:4px 0;text-decoration:underline;text-decoration-color:#6898af}
-.empty-locations,.demo-locations{background:#edf3f6;border-radius:9px;padding:18px}
-.demo-locations{margin-top:27px}.demo-locations summary{cursor:pointer;font-weight:700}
+.empty-locations{background:#edf3f6;border-radius:9px;padding:18px}
 .admin-locations-layout{display:grid;grid-template-columns:minmax(190px,1fr) minmax(0,3fr);gap:18px;align-items:start}
 .field-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .admin-location-list{list-style:none;padding:0}.admin-location-list li{border-bottom:1px solid var(--line);padding-bottom:6px;overflow-wrap:anywhere}.admin-location-list small{display:block}

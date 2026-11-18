@@ -3,7 +3,6 @@ import {Link} from 'react-router-dom';
 import API from '../config/api';
 import {issueLabel,StudyNotice,useLanguage} from './Language';
 import LocationMap,{pinIcons} from './LocationMap';
-import {Drains} from './Pages';
 
 export const labelKind=(kind,t)=>kind==='DRAIN'?t('Drain location','Hulevesikaivon sijainti'):issueLabel(kind,t);
 export const locationTitle=(point,language)=>language==='fi'?(point.nameFi||point.name):point.name;
@@ -52,6 +51,5 @@ export default function PublicLocations(){
     <h2>{t('Published locations','Julkaistut kohteet')}</h2>
     {error?<p role="alert">{t('Locations could not be loaded. You can still send an observation.','Kohteita ei voitu ladata. Voit silti ilmoittaa havainnon.')}</p>:!data?<p role="status">{t('Loading locations…','Ladataan kohteita…')}</p>:!data.length?<p className="empty-locations">{t('No field locations have been published yet. You can still report a location using a street or landmark.','Maastokohteita ei ole vielä julkaistu. Voit silti ilmoittaa sijainnin kadun tai maamerkin avulla.')}</p>:
       <div className="location-cards">{data.map(p=><LocationCard key={p.id} point={p} photo={API+'/api/locations/'+p.id+'/photo'} selected={selected===p.id} onSelect={()=>setSelected(p.id)}/>)}</div>}
-    <details className="demo-locations"><summary>{t('Show older demonstration locations','Näytä aiemmat esimerkkipaikat')}</summary><Drains embedded/></details>
   </div>;
 }
