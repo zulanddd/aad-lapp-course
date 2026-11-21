@@ -27,12 +27,8 @@ buildNumber.properties
 
 # Spring Boot
 spring-boot-starter/
-**/application.properties
-**/application-*.properties
-
-# Database credentials and secrets
-**/src/main/resources/application.properties
-**/src/main/resources/application-*.properties
+**/application-local.properties
+**/application-*.local.properties
 
 # IntelliJ IDEA
 .idea/
@@ -95,3 +91,15 @@ BACKEND_DEPLOYMENT_CHECKLIST.md
 BACKEND_SECURITY_SETUP.md
 DEPLOYMENT_ARCHITECTURE.md
 DEPLOYMENT_CHECKLIST.md
+
+# Local runtime state, private media and database exports
+.local/
+data/
+uploads/
+*.session
+*.session-journal
+*.dump
+/*.sql
+backups/
+*.backup
+upload-manifest.json
